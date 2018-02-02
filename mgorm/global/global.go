@@ -3,16 +3,33 @@ package global
 import (
 	"gopkg.in/mgo.v2"
 	"os"
-	"projects/mgorm/config"
+	"projects/server/data/mgorm/config"
 	"log"
 )
 
 var session *mgo.Session
-var db *mgo.Database
 var collections = make(map[string]*mgo.Collection)
 
-func Mgorm_Init(exit_signal chan os.Signal) {
+type DataStore struct{
+	ds_session *mgo.Session
+}
 
+func (ds DataStore)Close(){
+	ds.ds_session.Close()
+}
+
+func (ds DataStore)DB()*mgo.Database{
+	return ds.ds_session.DB("")
+}
+
+func NewDataStore()DataStore{
+	ds :=DataStore{
+		ds_session:session.Copy(),
+	}
+	return ds
+}
+
+func Mgorm_Init(exit_signal chan os.Signal) {
 	var err error
 	// TODO::Init Session
 	// TODO::Init Db
@@ -35,7 +52,7 @@ func Mgorm_Init(exit_signal chan os.Signal) {
 	//	Use default
 	//	If database not define
 	//	It will create a new one
-	db = session.DB("")
+	db := session.DB("")
 	log.Println("[INFO] mgorm:get database name:" + db.Name + " done")
 	info := mgo.CollectionInfo{
 		DisableIdIndex: config.MGORM_DISABLE_ID_INDEX,
@@ -57,8 +74,4 @@ func Mgorm_Init(exit_signal chan os.Signal) {
 		session.Close()
 		os.Exit(0)
 	}(exit_signal)
-}
-
-func DB() *mgo.Database {
-	return db
 }
